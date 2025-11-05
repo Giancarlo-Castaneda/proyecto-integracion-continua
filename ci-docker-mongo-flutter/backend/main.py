@@ -39,6 +39,10 @@ async def get_message():
     doc = await app.state.db.messages.find_one({"_id": "welcome"})
     return {"message": doc.get("text") if doc else ""}
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 @app.post("/message")
 async def set_message(payload: MessageIn):
     await app.state.db.messages.update_one(
