@@ -1,0 +1,8 @@
+# Ignorar carpeta de datos de Jenkins
+**/jenkins_home/
+jenkins_home/
+secrets/
+*.log
+
+# Ignorar archivos de sistema
+.DS_Store

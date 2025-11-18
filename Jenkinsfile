@@ -1,27 +1,36 @@
 pipeline {
     agent any
 
+    // Opciones globales para evitar que el proceso se cuelgue infinitamente
+    options {
+        timeout(time: 10, unit: 'MINUTES') // Esperar máximo 10 minutos
+        disableConcurrentBuilds() // No permitir dos ejecuciones al mismo tiempo
+    }
+
     environment {
-        // Nombre que le daremos a la imagen
         IMAGE_NAME = "mi-backend-python"
+        // Aseguramos que Docker use el socket correcto
+        DOCKER_HOST = "unix:///var/run/docker.sock"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Jenkins descarga el código automáticamente aquí
-                echo '--- Descargando código del repositorio ---'
+                echo '--- 1. Descargando código (Versión optimizada) ---'
+                // La configuración de "Shallow Clone" que hiciste en el Paso 1 aplica aquí
                 checkout scm
             }
         }
 
         stage('Construir Backend') {
             steps {
-                echo '--- Construyendo imagen Docker del Backend ---'
-                // Entramos a la carpeta backend y construimos usando el Dockerfile que tienes ahí
+                echo '--- 2. Construyendo Imagen Docker ---'
                 dir('backend') {
                     script {
-                        // Nota: Asegúrate de que tu Jenkins tenga permisos de Docker
+                        // Verificamos primero si docker responde
+                        sh 'docker --version'
+                        echo "Construyendo imagen: ${IMAGE_NAME}"
+                        // Comando de construcción
                         sh "docker build -t ${IMAGE_NAME}:latest ."
                     }
                 }
@@ -30,23 +39,25 @@ pipeline {
 
         stage('Pruebas') {
             steps {
-                echo '--- Ejecutando Pruebas (Simulación) ---'
-                // Aquí puedes poner comandos reales más adelante
-                echo 'Tests pasados correctamente.'
+                echo '--- 3. Ejecutando Pruebas ---'
+                // Aquí simulamos las pruebas. 
+                // Si tuvieras un script real sería: sh 'python -m pytest'
+                sh 'echo "Simulando pruebas unitarias..."'
+                sh 'echo "Tests completados exitosamente."'
             }
         }
     }
 
     post {
         always {
-            echo 'Limpiando espacio de trabajo...'
+            echo '--- Limpieza del Workspace ---'
             cleanWs()
         }
         success {
-            echo '¡El Pipeline finalizó con éxito!'
+            echo '✅ ¡Pipeline ejecutado con ÉXITO!'
         }
         failure {
-            echo 'Hubo un error en el proceso.'
+            echo '❌ El Pipeline ha fallado. Revisa los logs de arriba.'
         }
     }
 }
