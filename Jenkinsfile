@@ -9,7 +9,7 @@ pipeline {
     environment {
         // Variables principales
         IMAGE_NAME = "mi-backend-python"
-        DOCKERHUB_USERNAME = "giancarlocastaneda" // REEMPLAZAR con tu usuario de Docker Hub
+        DOCKERHUB_USERNAME = "karlsite13" // REEMPLAZAR con tu usuario de Docker Hub
         VERSION = "${env.BUILD_NUMBER}" // Usamos el número de build de Jenkins como versión
         
         // Variable para la imagen final con tag
