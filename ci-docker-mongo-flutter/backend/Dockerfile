@@ -1,34 +1,30 @@
 FROM python:3.12-slim
 
-# Evita prompts interactivos y reduce capa de apt
-ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONDONTWRITEBYTECODE=1 \
+# ENVIRONMENT VARIABLES
+ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Dependencias del sistema SOLO si quieres usar curl en el healthcheck (opción A)
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
-
-# AÑADIR ESTE BLOQUE: Instala herramientas de compilación para paquetes complejos
-# Si usas una imagen basada en Debian/Ubuntu (ej: python:3.10-slim)
+# 1. INSTALACIÓN DE HERRAMIENTAS DE SISTEMA Y COMPILACIÓN
 RUN apt-get update && apt-get install -y \
     gcc \
     python3-dev \
     build-essential \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# AHORA SÍ, la línea que falló
+# 2. COPIAR Y INSTALAR DEPENDENCIAS (El cambio CRÍTICO está aquí)
+# COPIA el archivo de requerimientos PRIMERO al WORKDIR /app
+COPY requirements.txt . 
+ 
+# Luego ejecuta el comando de instalación de pip
 RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-# Instala dependencias de Python
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copia el código
+# 3. COPIA EL CÓDIGO DE LA APLICACIÓN
 COPY . .
 
 EXPOSE 8000
 
-# Arranque de Uvicorn (asegúrate que tu app esté en main.py con objeto FastAPI = app)
+# 4. COMANDO DE ARRANQUE (Ajusta si tu app principal no es main:app)
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
