@@ -10,6 +10,17 @@ WORKDIR /app
 # Dependencias del sistema SOLO si quieres usar curl en el healthcheck (opción A)
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
+# AÑADIR ESTE BLOQUE: Instala herramientas de compilación para paquetes complejos
+# Si usas una imagen basada en Debian/Ubuntu (ej: python:3.10-slim)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    python3-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# AHORA SÍ, la línea que falló
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+
 # Instala dependencias de Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
