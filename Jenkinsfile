@@ -14,24 +14,26 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo '--- [CORRECCIÓN SSL] Deshabilitando verificación de certificados ---'
-                // Este comando le dice al cliente Git dentro de Jenkins que ignore el error del certificado
                 sh 'git config --global http.sslVerify false' 
-
                 echo '--- Descargando código fuente ---'
                 checkout scm
             }
         }
 
         stage('Construir Backend') {
+            agent {
+                docker {
+                    // Usamos una imagen que tiene el cliente Docker (CLI)
+                    image 'docker:20.10.16-cli' 
+                    // Montamos el socket para que este contenedor pueda hablar con el Docker Host
+                    args '-v /var/run/docker.sock:/var/run/docker.sock' 
+                }
+            }
             steps {
                 echo '--- 2. Construyendo Imagen Docker ---'
                 dir('backend') {
-                    script {
-                        // Verificamos si docker responde - Este es el siguiente punto de fallo probable
-                        sh 'docker --version' 
-                        echo "Construyendo imagen: ${IMAGE_NAME}"
-                        sh "docker build -t ${IMAGE_NAME}:latest ."
-                    }
+                    // Comando de construcción
+                    sh "docker build -t ${IMAGE_NAME}:latest ."
                 }
             }
         }
