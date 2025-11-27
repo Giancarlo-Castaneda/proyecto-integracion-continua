@@ -36,14 +36,14 @@ pipeline {
             }
         }
 
-        stage('Pruebas Unitarias') {
+       stage('Pruebas Unitarias') {
             steps {
-                echo '--- Ejecutando Pruebas (En contenedor efímero) ---'
-                // Truco Pro: Usamos la imagen que acabamos de construir para correr los tests.
-                // Así no tenemos problemas de montar volúmenes ni rutas.
+                echo '--- Ejecutando Pruebas con la Imagen Construida ---'
+                // Reemplazamos la etapa vacía por un comando que corre los tests 
+                // dentro de un contenedor desechable de la imagen que acabamos de crear.
                 script {
                     sh """
-                    docker run --rm ${FULL_IMAGE_NAME} bash -c "pip install pytest && python -m pytest tests/"
+                    docker run --rm ${FULL_IMAGE_NAME} bash -c 'python -m pytest tests/'
                     """
                 }
             }
