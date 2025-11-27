@@ -20,8 +20,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt . 
  
 # Luego ejecuta el comando de instalación de pip
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
-
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir --break-system-packages -r requirements.txt
 # 3. COPIA EL CÓDIGO DE LA APLICACIÓN
 COPY . .
 
