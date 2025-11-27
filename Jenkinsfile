@@ -27,7 +27,10 @@ pipeline {
             steps {
                 echo '--- Construyendo Imagen Docker ---'
                 dir('backend') {
-                    // Construimos la imagen directamente usando el Docker instalado en Jenkins
+                    // *** AÑADE ESTAS DOS LÍNEAS TEMPORALMENTE ***
+                    sh 'pwd'   // Muestra la ruta actual
+                    sh 'ls -la' // Muestra la lista de archivos en la carpeta backend
+                    // **********************************************
                     sh "docker build -t ${FULL_IMAGE_NAME} ."
                 }
             }
