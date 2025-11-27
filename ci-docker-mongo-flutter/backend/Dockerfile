@@ -1,5 +1,4 @@
-FROM python:3.12-slim
-
+FROM python:3.10-slim
 # ENVIRONMENT VARIABLES
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -15,12 +14,13 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. COPIAR Y INSTALAR DEPENDENCIAS (El cambio CRÍTICO está aquí)
-# COPIA el archivo de requerimientos PRIMERO al WORKDIR /app
+# 2. COPIAR Y INSTALAR DEPENDENCIAS 
 COPY requirements.txt . 
- 
-# Luego ejecuta el comando de instalación de pip
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir --break-system-packages -r requirements.txt
+
+# Luego ejecuta el comando de instalación de pip. Usamos el flag para evitar problemas.
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --break-system-packages -r requirements.txt
+
 # 3. COPIA EL CÓDIGO DE LA APLICACIÓN
 COPY . .
 
