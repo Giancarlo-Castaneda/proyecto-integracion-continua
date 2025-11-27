@@ -41,7 +41,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Pruebas Unitarias') {
             // Usamos un agente Python para que las pruebas sean limpias y aisladas
             agent {
