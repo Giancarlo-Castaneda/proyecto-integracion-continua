@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. COPIAR Y INSTALAR DEPENDENCIAS
-COPY requirements.txt . 
+COPY requirements.txt .
 
 # Luego ejecuta el comando de instalación de pip.
 RUN pip install --no-cache-dir --upgrade pip && \
