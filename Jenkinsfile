@@ -43,7 +43,7 @@ pipeline {
             }
         }
 
-    stage('Pruebas Unitarias') { 
+    stage('Pruebas Unitarias') {
             agent {
                 // Usamos la imagen recién construida para garantizar un entorno idéntico al de producción
                 image "${FULL_IMAGE_NAME}" 
@@ -82,23 +82,21 @@ pipeline {
         stage('Despliegue (Compose)') {
             agent {
                 docker {
-                    image 'docker/compose:latest' // Imagen que incluye Docker Compose
-                    args '-v /var/run/docker.sock:/var/run/docker.sock' 
+                    // CAMBIO 1: Usamos la imagen que ya sabemos que funciona y tiene la CLI de Docker
+                    image 'docker:20.10.16-cli'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
             steps {
-                echo '--- 4. Despliegue: Levantando la Aplicación con Docker Compose ---'
+                echo '--- 4. Despliegue: Levantando la Aplicación con Docker Compose (V2) ---'
                 dir('.') {
-                    // Detiene y elimina contenedores anteriores y levanta el nuevo backend y sus dependencias (Mongo)
-                    sh "docker-compose down || true" 
-                    // Levanta el servicio 'backend' (y sus dependencias) en modo detach. 
-                    // El compose usará la imagen que se construyó en la etapa anterior.
-                    sh "docker-compose up -d backend" 
+                    // CAMBIO 2: Usamos la sintaxis V2 de Docker Compose (docker compose con espacio)
+                    sh "docker compose down || true"
+                    sh "docker compose up -d backend"
                     sh "echo 'Aplicación desplegada en http://localhost:8000. Revisar logs de Compose.'"
                 }
             }
         }
-    }
 
     post {
         always {
