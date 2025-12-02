@@ -1,0 +1,7 @@
+comment:
+  layout: "diff, flags, files"
+  behavior: default
+  require_changes: false      # si true: solo comenta cuando cambia la cobertura
+  require_base: false         # true: requiere reporte base
+  require_head: true          # true: requiere reporte del head
+  hide_project_coverage: false  # true: solo muestra cobertura del patch/diff
