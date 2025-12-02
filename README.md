@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/github/Giancarlo-Castaneda/proyecto-integracion-continua/graph/badge.svg?token=U1J0T5BJ3Z)](https://codecov.io/github/Giancarlo-Castaneda/proyecto-integracion-continua)
+
 📌 Smart Notes – Arquitectura con Docker, FastAPI, PostgreSQL y Flutter
 
 Este proyecto implementa una aplicación móvil para gestión de tareas, compuesta por un frontend en Flutter, un backend en FastAPI y una base de datos PostgreSQL, todos orquestados mediante Docker Compose.
