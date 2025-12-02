@@ -10,3 +10,4 @@ Backend	FastAPI	API REST que maneja la lógica de negocio.
 Base de datos	PostgreSQL	Almacenamiento persistente de las tareas.
 Orquestación	Docker Compose	Interconexión y despliegue de servicios.
 CI/CD	Jenkins	Automatización del pipeline de construcción y despliegue.
+Codecov     Cobertura de código línea por línea
