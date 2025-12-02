@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
+// Cliente HTTP global/injectable (puedes reemplazarlo en los tests)
+http.Client httpClient = http.Client();
+
 void main() {
   runApp(const MyApp());
 }
@@ -37,9 +40,15 @@ class _HomePageState extends State<HomePage> {
     _fetchMessage();
   }
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchMessage() async {
     try {
-      final res = await http.get(Uri.parse('/api/message'));
+      final res = await httpClient.get(Uri.parse('/api/message'));
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
         setState(() {
@@ -59,7 +68,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _saveMessage() async {
     try {
-      final res = await http.post(
+      final res = await httpClient.post(
         Uri.parse('/api/message'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'text': _controller.text}),
@@ -69,7 +78,7 @@ class _HomePageState extends State<HomePage> {
         _fetchMessage();
       }
     } catch (e) {
-      // ignore
+      // ignore, podrías loguearlo si quieres
     }
   }
 
@@ -82,7 +91,10 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Mensaje actual:', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Mensaje actual:',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(12),
@@ -90,7 +102,10 @@ class _HomePageState extends State<HomePage> {
                 border: Border.all(),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(_message, style: Theme.of(context).textTheme.headlineSmall),
+              child: Text(
+                _message,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
             ),
             const SizedBox(height: 24),
             TextField(
