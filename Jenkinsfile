@@ -32,7 +32,7 @@ pipeline {
             }
             steps {
                 echo '--- 2. Construyendo Imagen Docker ---'
-                dir('backend') {
+                dir('ci-docker-mongo-flutter/backend') {
                     // *** AÑADE ESTAS DOS LÍNEAS TEMPORALMENTE ***
                     sh 'pwd'   // Muestra la ruta actual
                     sh 'ls -la' // Muestra la lista de archivos en la carpeta backend
@@ -44,19 +44,27 @@ pipeline {
         }
 
     stage('Pruebas Unitarias') {
-            agent {
-                // Usamos la imagen recién construida para garantizar un entorno idéntico al de producción
-                image "${FULL_IMAGE_NAME}" 
-            }
-            steps {
-                echo '--- 3. Ejecutando Pruebas Unitarias (Simulación Pytest) ---'
-                // Reemplazar con el comando real si usas Pytest
-                sh 'echo "Simulando ejecución de pytest..."' 
-                sh 'echo "Tests completados exitosamente."'
-            }
+    agent {
+        docker {
+            image "${FULL_IMAGE_NAME}"
+            args '-u root'
+        }
+    }
+    steps {
+        echo '--- 3. Ejecutando Pytest (pruebas reales) ---'
+
+        dir('ci-docker-mongo-flutter/backend') {
+            sh '''
+            pip install pytest httpx
+            pytest -q --disable-warnings --maxfail=1
+            '''
         }
 
-      /*  stage('Pruebas Unitarias') {
+        echo '--- Pruebas completadas exitosamente ---'
+    }
+}
+
+        /*  stage('Pruebas Unitarias') {
             steps {
                 echo '--- Ejecutando Pruebas con la Imagen Construida ---'
                 // Reemplazamos la etapa vacía por un comando que corre los tests 
@@ -103,14 +111,14 @@ pipeline {
             echo '--- Limpieza del Workspace ---'
             cleanWs()
             // Limpieza de imágenes (Opcional, pero bueno para el disco)
-            // sh "docker image prune -f || true" 
+            // sh "docker image prune -f || true"
         }
         success {
             // Este es el mensaje solicitado al finalizar con éxito
             echo "✅ ¡Pipeline ejecutado con ÉXITO! Imagen ${FULL_IMAGE_NAME} desplegada."
         }
         failure {
-            echo '❌ El Pipeline ha fallado. Revisa los logs de las etapas anteriores.'
+            echo '❌ El Pipeline ha FALLADO. Revisar los logs para más detalles.'
         }
     }
 }

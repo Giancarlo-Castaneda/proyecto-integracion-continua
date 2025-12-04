@@ -1,29 +1,32 @@
-# -------- Stage 1: Build Flutter web app --------
 FROM ghcr.io/cirruslabs/flutter:stable AS build
-WORKDIR /work
 
-# Crea un proyecto Flutter Web mínimo
-RUN flutter create --platforms=web app
-WORKDIR /work/app
+WORKDIR /app
 
-# Copia tu main.dart (la UI que llama al backend)
-COPY main.dart lib/main.dart
+# Copiar pubspec antes del código
+COPY pubspec.yaml .
 
-# Asegura soporte web y agrega la dependencia http usada por main.dart
+RUN flutter pub get
+
+# Copiar todo el proyecto
+COPY . .
+
+# Asegurar soporte Web
 RUN flutter config --enable-web
-RUN flutter pub add http
 
-# Compilación release para Web
+# Evitar problemas de permisos en pub cache
+ENV PUB_CACHE=/tmp/.pub_cache
+
+# Crear la carpeta web si el proyecto no la tiene
+RUN test -d web || flutter create . --platforms=web
+
+RUN flutter pub get
 RUN flutter build web --release
 
-# -------- Stage 2: Serve with Nginx + proxy /api --------
+# ======= Stage Nginx =========
 FROM nginx:alpine
 
-# Config Nginx que sirve Flutter y hace proxy /api -> backend:8000
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Copia los artefactos compilados
-COPY --from=build /work/app/build/web /usr/share/nginx/html
+COPY --from=build /app/build/web /usr/share/nginx/html
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

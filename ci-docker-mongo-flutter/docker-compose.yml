@@ -6,12 +6,12 @@ services:
       MONGO_INITDB_DATABASE: appdb
     volumes:
       - mongo_data:/data/db
-      - ./mongo-init:/docker-entrypoint-initdb.d:ro
-    networks: [appnet]
+    networks:
+      - appnet
     ports:
       - "27017:27017"
     healthcheck:
-      test: ["CMD-SHELL", "echo 'db.runCommand({ ping: 1 })' | mongosh --quiet || echo 'db.runCommand({ ping: 1 })' | mongo --quiet"]
+      test: ["CMD-SHELL", "echo 'db.runCommand({ ping: 1 })' | mongosh --quiet"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -28,35 +28,46 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
-    networks: [appnet]
-    # --- Healthcheck del backend ---
-    # Opción A (si instalaste curl en el Dockerfile):
+    networks:
+      - appnet
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
       start_period: 20s
-    # Opción B (si NO quieres instalar curl, comenta lo de arriba y usa esto):
-    # healthcheck:
-    #   test: ["CMD-SHELL", "python - << 'PY'\nimport urllib.request,sys\nu=urllib.request.urlopen('http://localhost:8000/health',timeout=3)\nimport json; d=json.loads(u.read()); sys.exit(0 if d.get('status')=='ok' else 1)\nPY"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 12
-    #   start_period: 20s
 
   flutter_web:
-    build: ./flutter_app
+    build:
+      context: ./flutter_app
+      dockerfile: Dockerfile
     container_name: flutter_web
     depends_on:
       backend:
         condition: service_healthy
     ports:
-      - "8081:80"              # Navegador => http://localhost:8081/
-    networks: [appnet]
+      - "8081:80"
+    networks:
+      - appnet
+
+  jenkins:
+  image: jenkins/jenkins:lts
+  container_name: jenkins
+  user: root
+  ports:
+    - "8082:8080"
+    - "50000:50000"
+  volumes:
+    - jenkins_home:/var/jenkins_home
+    - /var/run/docker.sock:/var/run/docker.sock
+  networks:
+    - appnet
+
 
 volumes:
   mongo_data:
+    jenkins_home:
+
 
 networks:
   appnet:
