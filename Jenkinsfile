@@ -56,7 +56,7 @@ pipeline {
         dir('ci-docker-mongo-flutter/backend') {
             sh '''
             pip install pytest httpx
-            pytest -q --disable-warnings --maxfail=1
+            pytest --junitxml=pytest-report.xml -q --disable-warnings --maxfail=1
             '''
         }
 
@@ -107,18 +107,18 @@ pipeline {
         }
 
     post {
-        always {
-            echo '--- Limpieza del Workspace ---'
-            cleanWs()
-            // Limpieza de imágenes (Opcional, pero bueno para el disco)
-            // sh "docker image prune -f || true"
-        }
-        success {
-            // Este es el mensaje solicitado al finalizar con éxito
-            echo "✅ ¡Pipeline ejecutado con ÉXITO! Imagen ${FULL_IMAGE_NAME} desplegada."
-        }
-        failure {
-            echo '❌ El Pipeline ha FALLADO. Revisar los logs para más detalles.'
-        }
+    always {
+        echo '--- Limpieza del Workspace ---'
+        cleanWs()
+    }
+    success {
+        echo "✔ ¡Pipeline ejecutado con ÉXITO! Imagen ${FULL_IMAGE_NAME} desplegada."
+        junit 'pytest-report.xml'
+        archiveArtifacts artifacts: '*.xml', fingerprint: true
+    }
+    failure {
+        echo '❌ El Pipeline ha FALLADO. Revisar los logs para más detalles.'
+        junit 'pytest-report.xml'
+        archiveArtifacts artifacts: '*.xml', fingerprint: true
     }
 }
