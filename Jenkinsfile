@@ -44,25 +44,24 @@ pipeline {
         }
 
     stage('Pruebas Unitarias') {
-    agent {
+      agent {
         docker {
-            image "${FULL_IMAGE_NAME}"
-            args '-u root'
+          image "${FULL_IMAGE_NAME}"
+          args '-u root'
         }
-    }
-    steps {
-        echo '--- 3. Ejecutando Pytest (pruebas reales) ---'
-
+      }
+      steps {
+        echo '--- Ejecutando pytest ---'
+        // ejecutar dentro del workspace / backend; asegurar que pytest esté instalado en la imagen o se instale antes
         dir('ci-docker-mongo-flutter/backend') {
-            sh '''
-            pip install pytest httpx
+          sh '''
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
             pytest --junitxml=pytest-report.xml -q --disable-warnings --maxfail=1
-            '''
+          '''
         }
-
-        echo '--- Pruebas completadas exitosamente ---'
+      }
     }
-}
 
         /*  stage('Pruebas Unitarias') {
             steps {
@@ -106,11 +105,24 @@ pipeline {
             }
         }
 
-    post {
-    always {
-        echo '--- Limpieza del Workspace ---'
-        cleanWs()
+        stage('Monitoreo') {
+      steps {
+        echo '--- Estado de contenedores ---'
+        sh 'docker ps'
+        sh 'docker stats --no-stream || true'
+      }
     }
+  } // stages
+
+  post {
+    always {
+      echo '--- Limpieza workspace ---'
+      cleanWs()
+      // publicar resultado JUnit (ruta relativa desde workspace)
+      junit 'ci-docker-mongo-flutter/backend/pytest-report.xml'
+      archiveArtifacts artifacts: 'ci-docker-mongo-flutter/backend/pytest-report.xml', fingerprint: true
+    }
+    
     success {
         echo "✔ ¡Pipeline ejecutado con ÉXITO! Imagen ${FULL_IMAGE_NAME} desplegada."
         junit 'pytest-report.xml'
