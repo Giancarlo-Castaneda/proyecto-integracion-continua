@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = "karlsite13"
+        DOCKERHUB_USER = "karlsitel3"
         IMAGE_NAME = "backend-python"
         VERSION = "${env.BUILD_NUMBER}"
         FULL_IMAGE = "${DOCKERHUB_USER}/${IMAGE_NAME}:${VERSION}"
@@ -20,8 +20,14 @@ pipeline {
         }
 
         stage('Build Backend Image') {
+            agent {
+                docker {
+                    image 'docker:24.0.5-dind'
+                    args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
+                }
+            }
             steps {
-                echo "🔧 Construyendo imagen Docker desde backend..."
+                echo "🔨 Construyendo imagen Docker desde backend..."
                 script {
                     docker.build(env.FULL_IMAGE, "ci-docker-mongo-flutter/backend")
                 }
@@ -29,24 +35,25 @@ pipeline {
         }
 
         stage('Run Unit Tests') {
-            steps {
-                echo "🧪 Ejecutando pytest dentro de contenedor Python..."
-                script {
-                    docker.image("python:3.11-slim").inside('-u 0') {
-                        sh """
-                            pip install --upgrade pip
-                            pip install -r ci-docker-mongo-flutter/backend/requirements.txt
-                            pytest ci-docker-mongo-flutter/backend/tests/test_message.py \
-                                --junitxml=${TEST_REPORT}
-                        """
-                    }
+            agent {
+                docker {
+                    image 'python:3.11-slim'
                 }
+            }
+            steps {
+                echo "🧪 Ejecutando tests de Pytest..."
+                sh """
+                    pip install --upgrade pip
+                    pip install -r ci-docker-mongo-flutter/backend/requirements.txt
+                    pytest ci-docker-mongo-flutter/backend/tests \
+                        --junitxml=${TEST_REPORT}
+                """
             }
         }
 
         stage('Docker Hub Login & Push') {
             steps {
-                echo "📤 Subiendo imagen a Docker Hub..."
+                echo "📦 Subiendo imagen a Docker Hub..."
                 script {
                     docker.withRegistry("https://registry.hub.docker.com", "dockerhub-credentials") {
                         docker.image(env.FULL_IMAGE).push()
@@ -57,12 +64,12 @@ pipeline {
 
         stage('Deploy with Docker Compose') {
             steps {
-                echo "🚀 Desplegando con docker compose..."
+                echo "🚀 Deploying con Docker Compose..."
                 dir('ci-docker-mongo-flutter') {
                     sh """
                         docker compose down || true
                         docker compose pull || true
-                        docker compose up -d
+                        docker compose up -d backend
                     """
                 }
             }
@@ -78,11 +85,15 @@ pipeline {
 
     post {
         always {
-            echo "📦 Guardando reportes..."
+            echo "📁 Guardando reportes..."
             archiveArtifacts artifacts: "${TEST_REPORT}", allowEmptyArchive: true
         }
         success {
-            echo "✔ Publicando resultados de pruebas"
+            echo "✔ Publicando resultados..."
+            junit "${TEST_REPORT}"
+        }
+        failure {
+            echo "❌ Falló la ejecución, revisando reportes..."
             junit "${TEST_REPORT}"
         }
     }
