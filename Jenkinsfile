@@ -31,10 +31,9 @@ pipeline {
                 }
             }
             steps {
-                dir('ci-docker-mongo-flutter/backend') {
+                dir('backend') {
                     sh '''
-                    pwd
-                    ls -la
+                    echo "⋙ Construyendo imagen del backend..."
                     docker build -t ${FULL_IMAGE_NAME} .
                     '''
                 }
@@ -44,13 +43,13 @@ pipeline {
         stage('Pruebas Unitarias') {
             agent {
                 docker {
-                    image "${FULL_IMAGE_NAME}"
-                    args '-u root'
+                    image 'python:3.10'
                 }
             }
             steps {
-                dir('ci-docker-mongo-flutter/backend') {
+                dir('backend') {
                     sh '''
+                    pip install --upgrade pip
                     pip install -r requirements.txt
                     pytest --junitxml=pytest-report.xml -q --disable-warnings
                     '''
@@ -61,8 +60,7 @@ pipeline {
         stage('Login y Push') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials',
-                                                 usernameVariable: 'USER',
-                                                 passwordVariable: 'PASS')]) {
+                        usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh "docker login -u ${USER} -p ${PASS}"
                 }
                 sh "docker push ${FULL_IMAGE_NAME}"
@@ -79,6 +77,7 @@ pipeline {
             steps {
                 dir('.') {
                     sh '''
+                    echo "⋙ Desplegando aplicación..."
                     docker compose down || true
                     docker compose up -d backend
                     '''
@@ -97,20 +96,18 @@ pipeline {
     post {
 
         always {
-            echo "--- Limpieza workspace y colecta de artefactos ---"
-
-            archiveArtifacts artifacts: 'ci-docker-mongo-flutter/backend/pytest-report.xml',
-                             fingerprint: true
+            echo "⋙ Publicando artefactos..."
+            archiveArtifacts artifacts: 'backend/pytest-report.xml', fingerprint: true
         }
 
         success {
-            echo "✔ Proyecto ejecutado correctamente"
-            junit 'ci-docker-mongo-flutter/backend/pytest-report.xml'
+            echo "✔ Pipeline ejecutado correctamente"
+            junit 'backend/pytest-report.xml'
         }
 
         failure {
-            echo "❌ El pipeline falló. Revisar logs."
-            junit 'ci-docker-mongo-flutter/backend/pytest-report.xml'
+            echo "✘ El pipeline falló. Revisar logs."
+            junit 'backend/pytest-report.xml'
         }
     }
 }
