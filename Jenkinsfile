@@ -24,43 +24,43 @@ pipeline {
         }
 
         stage('Construir Backend') {
-            agent {
-                docker {
-                    image 'docker:20.10.16-cli'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock'
-                }
-            }
-            steps {
-                dir('backend') {
-                    sh '''
-                    echo "⋙ Construyendo imagen del backend..."
-                    docker build -t ${FULL_IMAGE_NAME} .
-                    '''
-                }
-            }
+    agent {
+        docker {
+            image 'docker:20.10.16-cli'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
         }
+    }
+    steps {
+        dir('ci-docker-mongo-flutter/backend') {
+            sh '''
+                echo ">>> Construyendo backend..."
+                docker build -t ${FULL_IMAGE_NAME} .
+            '''
+        }
+    }
+}
 
         stage('Pruebas Unitarias') {
-            agent {
-                docker {
-                    image 'python:3.10'
-                }
-            }
-            steps {
-                dir('backend') {
-                    sh '''
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
-                    pytest --junitxml=pytest-report.xml -q --disable-warnings
-                    '''
+    steps {
+        dir('ci-docker-mongo-flutter/backend') {
+            sh '''
+                pip install -r requirements.txt
+                pytest --junitxml=pytest-report.xml
+            '''
+        }
+    }
+}
+            post {
+                always {
+                    junit 'backend/pytest-report.xml'
                 }
             }
         }
 
         stage('Login y Push') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials',
-                        usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials',                    usernameVariable: 'USER',
+                passwordVariable: 'PASS')]) {
                     sh "docker login -u ${USER} -p ${PASS}"
                 }
                 sh "docker push ${FULL_IMAGE_NAME}"
@@ -70,16 +70,16 @@ pipeline {
         stage('Despliegue (Compose)') {
             agent {
                 docker {
-                    image 'docker:20.10.16-cli'
-                    args '-v /var/run/docker.sock:/var/run/docker.sock'
+                    image 'docker:24.0.5-dind'
+                    args '--privileged -v /var/run/docker.sock:/var/run/docker.sock'
                 }
             }
             steps {
                 dir('.') {
                     sh '''
-                    echo "⋙ Desplegando aplicación..."
-                    docker compose down || true
-                    docker compose up -d backend
+                        echo "Redeploying app..."
+                        docker compose down || true
+                        docker compose up -d backend
                     '''
                 }
             }
@@ -94,20 +94,15 @@ pipeline {
     }
 
     post {
-
-        always {
-            echo "⋙ Publicando artefactos..."
-            archiveArtifacts artifacts: 'backend/pytest-report.xml', fingerprint: true
-        }
-
-        success {
-            echo "✔ Pipeline ejecutado correctamente"
-            junit 'backend/pytest-report.xml'
-        }
-
-        failure {
-            echo "✘ El pipeline falló. Revisar logs."
-            junit 'backend/pytest-report.xml'
-        }
+    always {
+        archiveArtifacts artifacts: 'ci-docker-mongo-flutter/backend/pytest-report.xml', fingerprint: true
     }
+    success {
+        junit 'ci-docker-mongo-flutter/backend/pytest-report.xml'
+    }
+    failure {
+        junit 'ci-docker-mongo-flutter/backend/pytest-report.xml'
+    }
+}
+
 }
