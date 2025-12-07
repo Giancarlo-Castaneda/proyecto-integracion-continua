@@ -1,4 +1,5 @@
 pipeline {
+
     agent any
 
     options {
@@ -17,7 +18,6 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                echo "--- Checkout del repositorio ---"
                 sh 'git config --global http.sslVerify false'
                 checkout scm
             }
@@ -31,39 +31,38 @@ pipeline {
                 }
             }
             steps {
-                echo "--- Construyendo imagen Docker ---"
                 dir('ci-docker-mongo-flutter/backend') {
-                    sh """
-                        pwd
-                        ls -la
-                        docker build -t ${FULL_IMAGE_NAME} .
-                    """
+                    sh '''
+                    pwd
+                    ls -la
+                    docker build -t ${FULL_IMAGE_NAME} .
+                    '''
                 }
             }
         }
 
         stage('Pruebas Unitarias') {
+            agent {
+                docker {
+                    image "${FULL_IMAGE_NAME}"
+                    args '-u root'
+                }
+            }
             steps {
-                echo "--- Ejecutando pytest ---"
-
                 dir('ci-docker-mongo-flutter/backend') {
-                    sh """
-                        pip install --upgrade pip
-                        pip install -r requirements.txt
-                        pytest --junitxml=pytest-report.xml -q --disable-warnings --maxfail=1
-                    """
+                    sh '''
+                    pip install -r requirements.txt
+                    pytest --junitxml=pytest-report.xml -q --disable-warnings
+                    '''
                 }
             }
         }
 
         stage('Login y Push') {
             steps {
-                echo "--- Subiendo a DockerHub ---"
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-credentials',
-                    usernameVariable: 'USER',
-                    passwordVariable: 'PASS'
-                )]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials',
+                                                 usernameVariable: 'USER',
+                                                 passwordVariable: 'PASS')]) {
                     sh "docker login -u ${USER} -p ${PASS}"
                 }
                 sh "docker push ${FULL_IMAGE_NAME}"
@@ -78,20 +77,19 @@ pipeline {
                 }
             }
             steps {
-                echo "--- Despliegue con docker compose ---"
                 dir('.') {
-                    sh "docker compose down || true"
-                    sh "docker compose up -d backend"
-                    sh "echo Aplicación desplegada en http://localhost:8000"
+                    sh '''
+                    docker compose down || true
+                    docker compose up -d backend
+                    '''
                 }
             }
         }
 
         stage('Monitoreo') {
             steps {
-                echo "--- Estado de contenedores ---"
-                sh "docker ps"
-                sh "docker stats --no-stream || true"
+                sh 'docker ps'
+                sh 'docker stats --no-stream || true'
             }
         }
     }
@@ -99,22 +97,20 @@ pipeline {
     post {
 
         always {
-            echo "--- Archivando artefactos ---"
-            archiveArtifacts artifacts: 'ci-docker-mongo-flutter/backend/pytest-report.xml', fingerprint: true
+            echo "--- Limpieza workspace y colecta de artefactos ---"
 
-            echo "--- Publicando resultados JUnit ---"
-            junit 'ci-docker-mongo-flutter/backend/pytest-report.xml'
-
-            echo "--- Limpieza Workspace ---"
-            cleanWs()
+            archiveArtifacts artifacts: 'ci-docker-mongo-flutter/backend/pytest-report.xml',
+                             fingerprint: true
         }
 
         success {
-            echo "✓ Pipeline ejecutado con ÉXITO. Imagen ${FULL_IMAGE_NAME} creada y desplegada."
+            echo "✔ Proyecto ejecutado correctamente"
+            junit 'ci-docker-mongo-flutter/backend/pytest-report.xml'
         }
 
         failure {
-            echo "✗ El Pipeline ha fallado. Revisar logs en consola."
+            echo "❌ El pipeline falló. Revisar logs."
+            junit 'ci-docker-mongo-flutter/backend/pytest-report.xml'
         }
     }
 }
