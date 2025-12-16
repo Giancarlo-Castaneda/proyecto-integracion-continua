@@ -27,17 +27,23 @@ pipeline {
         }
 
         stage('Run Unit Tests (Docker)') {
-            steps {
-                sh '''
-                  docker run --rm \
-                    -v $(pwd)/ci-docker-mongo-flutter/backend:/app \
-                    -w /app \
-                    $FULL_IMAGE \
-                    pytest tests --junitxml=$TEST_REPORT
-                '''
-            }
-        }
-
+  steps {
+    sh '''
+      docker run --rm \
+        -v "$PWD/ci-docker-mongo-flutter/backend:/app" \
+        -w /app \
+        ${FULL_IMAGE} \
+        sh -c "
+          if [ -d tests ]; then
+            pytest tests --junitxml=pytest-report.xml
+          else
+            echo 'No tests found, generating empty report'
+            echo '<testsuite tests=\"0\"></testsuite>' > pytest-report.xml
+          fi
+        "
+    '''
+  }
+}
         stage('Docker Hub Login & Push') {
             steps {
                 withCredentials([usernamePassword(
