@@ -2,11 +2,13 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = 'karlsite13'
-        IMAGE_NAME     = 'backend-python'
-        VERSION        = "${BUILD_NUMBER}"
-        FULL_IMAGE     = "${DOCKERHUB_USER}/${IMAGE_NAME}:${VERSION}"
-        TEST_REPORT    = 'pytest-report.xml'
+        // Docker Hub
+        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
+        DOCKERHUB_USER        = 'karlitos13'
+
+        // Imágenes
+        BACKEND_IMAGE = 'backend-python:ci'
+        BACKEND_PATH  = 'ci-docker-mongo-flutter/backend'
     }
 
     stages {
@@ -20,34 +22,36 @@ pipeline {
         stage('Build Backend Image') {
             steps {
                 sh '''
-                  docker version
-                  docker build -t $FULL_IMAGE ci-docker-mongo-flutter/backend
+                docker build \
+                  -t ${BACKEND_IMAGE} \
+                  ${BACKEND_PATH}
                 '''
             }
         }
 
         stage('Run Unit Tests (Docker)') {
-    steps {
-        sh '''
-        docker run --rm \
-          -v $PWD/ci-docker-mongo-flutter/backend:/app \
-          -w /app \
-          backend-python:latest \
-          pytest tests --junitxml=pytest-report.xml
-        '''
-    }
-}
+            steps {
+                sh '''
+                docker run --rm \
+                  -v $PWD/${BACKEND_PATH}:/app \
+                  -w /app \
+                  ${BACKEND_IMAGE} \
+                  pytest tests --junitxml=pytest-report.xml
+                '''
+            }
+        }
 
         stage('Docker Hub Login & Push') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-credentials',
+                    credentialsId: "${DOCKERHUB_CREDENTIALS}",
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                      echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                      docker push $FULL_IMAGE
+                    docker login -u "$DOCKER_USER" -p "$DOCKER_PASS"
+                    docker tag ${BACKEND_IMAGE} ${DOCKERHUB_USER}/${BACKEND_IMAGE}
+                    docker push ${DOCKERHUB_USER}/${BACKEND_IMAGE}
                     '''
                 }
             }
@@ -55,20 +59,18 @@ pipeline {
 
         stage('Deploy with Docker Compose') {
             steps {
-                dir('ci-docker-mongo-flutter') {
-                    sh '''
-                      docker compose down || true
-                      docker compose up -d --build
-                    '''
-                }
+                sh '''
+                docker compose \
+                  -f docker-compose.yml \
+                  up -d --build
+                '''
             }
         }
 
         stage('Monitor') {
             steps {
                 sh '''
-                  docker ps
-                  docker stats --no-stream || true
+                docker ps
                 '''
             }
         }
@@ -76,10 +78,12 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: "${TEST_REPORT}", allowEmptyArchive: true
+            junit 'ci-docker-mongo-flutter/backend/pytest-report.xml'
         }
-        success {
-            junit "${TEST_REPORT}"
+        cleanup {
+            sh '''
+            docker image prune -f
+            '''
         }
     }
 }
