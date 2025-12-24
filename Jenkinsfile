@@ -32,11 +32,12 @@ pipeline {
         docker run --rm \
           -v $PWD/ci-docker-mongo-flutter/backend:/app \
           -w /app \
-          karlitos13/backend-python:4 \
+          backend-python:latest \
           pytest tests --junitxml=pytest-report.xml
         '''
     }
 }
+
         stage('Docker Hub Login & Push') {
             steps {
                 withCredentials([usernamePassword(
