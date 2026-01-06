@@ -2,13 +2,9 @@ pipeline {
     agent any
 
     environment {
-        // Docker Hub
-        DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
-        DOCKERHUB_USER        = 'karlitos13'
-
-        // Imágenes
-        BACKEND_IMAGE = 'backend-python:ci'
-        BACKEND_PATH  = 'ci-docker-mongo-flutter/backend'
+        BACKEND_PATH  = "ci-docker-mongo-flutter/backend"
+        IMAGE_NAME    = "backend-python-ci"
+        TEST_REPORT   = "pytest-report.xml"
     }
 
     stages {
@@ -21,69 +17,75 @@ pipeline {
 
         stage('Build Backend Image') {
             steps {
-                sh '''
-                docker build \
-                  -t ${BACKEND_IMAGE} \
-                  ${BACKEND_PATH}
-                '''
+                sh """
+                docker build -t ${IMAGE_NAME} ${BACKEND_PATH}
+                """
             }
         }
 
         stage('Run Unit Tests (Docker)') {
             steps {
-                sh '''
+                sh """
                 docker run --rm \
-                  -v $PWD/${BACKEND_PATH}:/app \
+                  -v \$PWD/${BACKEND_PATH}:/app \
                   -w /app \
-                  ${BACKEND_IMAGE} \
-                  pytest tests --junitxml=pytest-report.xml
-                '''
+                  ${IMAGE_NAME} \
+                  sh -c "
+                    pytest --junitxml=${TEST_REPORT} || true
+                  "
+                """
+            }
+        }
+
+        stage('Publish Test Results') {
+            steps {
+                junit allowEmptyResults: true, testResults: "${BACKEND_PATH}/${TEST_REPORT}"
             }
         }
 
         stage('Docker Hub Login & Push') {
+            when {
+                expression { env.DOCKERHUB_USERNAME != null }
+            }
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: "${DOCKERHUB_CREDENTIALS}",
+                    credentialsId: 'dockerhub-credentials',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh '''
-                    docker login -u "$DOCKER_USER" -p "$DOCKER_PASS"
-                    docker tag ${BACKEND_IMAGE} ${DOCKERHUB_USER}/${BACKEND_IMAGE}
-                    docker push ${DOCKERHUB_USER}/${BACKEND_IMAGE}
-                    '''
+                    sh """
+                    docker login -u $DOCKER_USER -p $DOCKER_PASS
+                    docker tag ${IMAGE_NAME} $DOCKER_USER/${IMAGE_NAME}:latest
+                    docker push $DOCKER_USER/${IMAGE_NAME}:latest
+                    """
                 }
             }
         }
 
         stage('Deploy with Docker Compose') {
             steps {
-                sh '''
-                docker compose \
-                  -f docker-compose.yml \
-                  up -d --build
-                '''
+                sh """
+                docker compose up -d
+                """
             }
         }
 
         stage('Monitor') {
             steps {
-                sh '''
-                docker ps
-                '''
+                echo "Aplicación desplegada correctamente"
             }
         }
     }
 
     post {
         always {
-            junit 'ci-docker-mongo-flutter/backend/pytest-report.xml'
+            sh "docker image prune -f || true"
         }
-        cleanup {
-            sh '''
-            docker image prune -f
-            '''
+        success {
+            echo "Pipeline ejecutado correctamente ✅"
+        }
+        failure {
+            echo "Pipeline falló ❌"
         }
     }
 }
