@@ -50,23 +50,26 @@ pipeline {
         }
 
         stage('Docker Hub Login & Push') {
-            when {
-                expression { fileExists("${BACKEND_PATH}/${REPORT_FILE}") }
-            }
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-credentials',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh """
-                    echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
-                    docker tag ${IMAGE_NAME} \$DOCKER_USER/${IMAGE_NAME}:latest
-                    docker push \$DOCKER_USER/${IMAGE_NAME}:latest
-                    """
-                }
-            }
+    steps {
+        withCredentials([usernamePassword(
+            credentialsId: 'dockerhub-credentials',
+            usernameVariable: 'DOCKER_USER',
+            passwordVariable: 'DOCKER_PASS'
+        )]) {
+            sh """
+            echo "Logging into Docker Hub..."
+            echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
+
+            echo "Tagging image..."
+            docker tag backend-python-ci \$DOCKER_USER/backend-python-ci:latest
+
+            echo "Pushing image..."
+            docker push \$DOCKER_USER/backend-python-ci:latest
+            """
         }
+    }
+}
+
 
         stage('Deploy with Docker Compose') {
             when {
