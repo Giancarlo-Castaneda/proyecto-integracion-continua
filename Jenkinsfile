@@ -3,8 +3,6 @@ pipeline {
 
     environment {
         IMAGE_NAME   = "backend-python-ci"
-        DOCKER_USER  = credentials('dockerhub-user')
-        DOCKER_PASS  = credentials('dockerhub-pass')
         DOCKER_REPO  = "karlsite13/backend-python-ci"
         BACKEND_PATH = "ci-docker-mongo-flutter/backend"
     }
@@ -46,7 +44,6 @@ pipeline {
         stage('Validate Local Image') {
             steps {
                 sh """
-                echo "Validando imagen local:"
                 docker images | grep ${IMAGE_NAME} || echo "Imagen no encontrada (OK académico)"
                 """
             }
@@ -54,19 +51,22 @@ pipeline {
 
         stage('Docker Hub Login & Push (Opcional)') {
             when {
-                allOf {
-                    expression { DOCKER_USER != null }
-                    expression { DOCKER_PASS != null }
-                }
+                expression { false }   // 🔥 FORZADO A SKIP (modo académico)
             }
             steps {
-                sh """
-                echo "Login Docker Hub"
-                echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
-
-                docker tag ${IMAGE_NAME}:latest ${DOCKER_REPO}:latest
-                docker push ${DOCKER_REPO}:latest
-                """
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-user',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
+                    sh """
+                    echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+                    docker tag ${IMAGE_NAME}:latest ${DOCKER_REPO}:latest
+                    docker push ${DOCKER_REPO}:latest
+                    """
+                }
             }
         }
 
@@ -75,9 +75,7 @@ pipeline {
                 expression { fileExists('docker-compose.yml') }
             }
             steps {
-                sh """
-                docker compose up -d || true
-                """
+                sh 'docker compose up -d || true'
             }
         }
     }
