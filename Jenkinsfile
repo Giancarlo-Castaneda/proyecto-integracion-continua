@@ -80,6 +80,23 @@ pipeline {
         }
     }
 
+        stage('Deploy to AWS') {
+    steps {
+        withCredentials([sshUserPrivateKey(
+            credentialsId: 'aws-ec2-key',
+            keyFileVariable: 'SSH_KEY',
+            usernameVariable: 'SSH_USER'
+        )]) {
+            sh '''
+            ssh -i $SSH_KEY $SSH_USER@IP_PUBLICA_EC2 "
+              docker pull karlsite13/backend-python-ci:latest &&
+              docker compose -f docker-compose.prod.yml up -d
+            "
+            '''
+        }
+    }
+}
+
     post {
         always {
             sh 'docker image prune -f || true'
