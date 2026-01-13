@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 from motor.motor_asyncio import AsyncIOMotorClient
+from prometheus_fastapi_instrumentator import Instrumentator
 
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://mongo:27017")
 MONGO_DB = os.getenv("MONGO_DB", "appdb")
@@ -20,6 +21,10 @@ app.add_middleware(
 
 class MessageIn(BaseModel):
     text: str
+
+@app.on_event("startup")
+async def startup():
+    Instrumentator().instrument(app).expose(app)
 
 @app.on_event("startup")
 async def startup_event():
