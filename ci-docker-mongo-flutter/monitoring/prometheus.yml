@@ -2,6 +2,11 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: "backend"
+  - job_name: "prometheus"
     static_configs:
-      - targets: ["backend:8000"]
+      - targets: ["prometheus:9090"]
+
+  - job_name: "jenkins"
+    metrics_path: /prometheus
+    static_configs:
+      - targets: ["<54.91.85.168>:8080"]

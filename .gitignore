@@ -3,6 +3,18 @@
 jenkins_home/
 secrets/
 *.log
+*.pem
 
 # Ignorar archivos de sistema
 .DS_Store
+.env
+
+# Terraform
+infra/.terraform/
+infra/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+
+# Grafana
+grafana/data/
+prometheus/data/
