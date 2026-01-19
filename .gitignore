@@ -1,20 +1,25 @@
-# Ignorar carpeta de datos de Jenkins
-**/jenkins_home/
-jenkins_home/
-secrets/
-*.log
-*.pem
+# Python
+venv/
+__pycache__/
+*.pyc
 
-# Ignorar archivos de sistema
-.DS_Store
-.env
+# Docker
+*.log
 
 # Terraform
 infra/.terraform/
+infra/terraform.tfstate
+infra/terraform.tfstate.backup
 infra/.terraform.lock.hcl
-*.tfstate
-*.tfstate.*
 
-# Grafana
-grafana/data/
-prometheus/data/
+# Jenkins
+jenkins_home/
+
+# Grafana/Prometheus data
+monitoring/grafana/data/
+monitoring/prometheus/data/
+
+# Claves
+*.pem
+*.key
+*.tfvars
