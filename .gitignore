@@ -1,5 +1,5 @@
 # Python
-venv/
+backend/venv/
 __pycache__/
 *.pyc
 
@@ -11,6 +11,8 @@ infra/.terraform/
 infra/terraform.tfstate
 infra/terraform.tfstate.backup
 infra/.terraform.lock.hcl
+infra/terraform-provider*
+
 
 # Jenkins
 jenkins_home/
@@ -23,3 +25,4 @@ monitoring/prometheus/data/
 *.pem
 *.key
 *.tfvars
+*.exe
