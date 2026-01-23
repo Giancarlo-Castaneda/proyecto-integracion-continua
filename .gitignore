@@ -2,6 +2,7 @@
 backend/venv/
 __pycache__/
 *.pyc
+venv/
 
 # Docker
 *.log
@@ -12,7 +13,12 @@ infra/terraform.tfstate
 infra/terraform.tfstate.backup
 infra/.terraform.lock.hcl
 infra/terraform-provider*
+infra/terraform/providers/
 
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
 
 # Jenkins
 jenkins_home/
@@ -26,3 +32,7 @@ monitoring/prometheus/data/
 *.key
 *.tfvars
 *.exe
+
+# OS
+.DS_Store
+Thumbs.db
