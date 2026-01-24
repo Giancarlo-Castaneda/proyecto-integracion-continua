@@ -3,13 +3,13 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME      = "backend-python-ci"
-        DOCKER_REPO     = "karlslite13/backend-python-ci"
-        BACKEND_PATH    = "ci-docker-mongo-flutter/backend"
+        IMAGE_NAME   = "backend-python-ci"
+        DOCKER_REPO  = "karlslite13/backend-python-ci"
+        BACKEND_PATH = "ci-docker-mongo-flutter/backend"
 
-        // Variables para Telegram
         TELEGRAM_TOKEN = credentials('telegram-token')
-        TELEGRAM_CHAT  = "-100XXXXXXXXXX"   // <-- tu grupo
+        TELEGRAM_CHAT  = "-100XXXXXXXXXX"   // tu ID de grupo
+        IP_PUBLICA_EC2 = "54.91.85.168"
     }
 
     stages {
@@ -70,9 +70,10 @@ pipeline {
                     usernameVariable: 'SSH_USER'
                 )]) {
                     sh """
-                    ssh -o StrictHostKeyChecking=no -i $SSH_KEY $SSH_USER@${IP_PUBLICA_EC2} \
-                        "docker pull ${DOCKER_REPO}:latest &&
-                         docker compose -f docker-compose.prod.yml up -d"
+                    ssh -o StrictHostKeyChecking=no -i $SSH_KEY $SSH_USER@${IP_PUBLICA_EC2} '
+                        docker pull ${DOCKER_REPO}:latest &&
+                        docker compose -f docker-compose.prod.yml up -d
+                    '
                     """
                 }
             }
@@ -81,23 +82,18 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline completado correctamente"
-
-            // -------- TELEGRAM ----------
             sh """
             curl -s -X POST https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage \
-                -d chat_id=${TELEGRAM_CHAT} \
-                -d text="✔ Pipeline completado con éxito en EC2"
+            -d chat_id=${TELEGRAM_CHAT} \
+            -d text='✔ Pipeline completado con éxito en EC2'
             """
         }
 
         failure {
-            echo "Pipeline falló"
-
             sh """
             curl -s -X POST https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage \
-                -d chat_id=${TELEGRAM_CHAT} \
-                -d text="❌ Pipeline falló. Revisar Jenkins."
+            -d chat_id=${TELEGRAM_CHAT} \
+            -d text='❌ Pipeline falló. Revisar Jenkins.'
             """
         }
 
