@@ -1,23 +1,19 @@
 pipeline {
-
     agent any
 
     environment {
         IMAGE_NAME   = "backend-python-ci"
-        DOCKER_REPO  = "karlslite13/backend-python-ci"
+        DOCKER_REPO  = "karlslitel3/backend-python-ci"
         BACKEND_PATH = "ci-docker-mongo-flutter/backend"
 
         TELEGRAM_TOKEN = credentials('telegram-token')
-        TELEGRAM_CHAT  = "-100XXXXXXXXXX"   // tu ID de grupo
-        IP_PUBLICA_EC2 = "54.91.85.168"
+        TELEGRAM_CHAT  = "-100xxxxxxxx"    // tu grupo
     }
 
     stages {
 
         stage('Checkout') {
-            steps {
-                checkout scm
-            }
+            steps { checkout scm }
         }
 
         stage('Build Backend Image') {
@@ -32,10 +28,10 @@ pipeline {
             steps {
                 sh """
                 docker run --rm \
-                    -v \$PWD/${BACKEND_PATH}:/app \
-                    -w /app \
-                    ${IMAGE_NAME}:latest \
-                    pytest --junitxml=pytest-report.xml || true
+                  -v \$PWD/${BACKEND_PATH}:/app \
+                  -w /app \
+                  ${IMAGE_NAME}:latest \
+                  pytest --junitxml=pytest-report.xml || true
                 """
             }
         }
@@ -53,6 +49,7 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
+
                     sh """
                     echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                     docker tag ${IMAGE_NAME}:latest ${DOCKER_REPO}:latest
@@ -69,9 +66,11 @@ pipeline {
                     keyFileVariable: 'SSH_KEY',
                     usernameVariable: 'SSH_USER'
                 )]) {
+
                     sh """
                     ssh -o StrictHostKeyChecking=no -i $SSH_KEY $SSH_USER@${IP_PUBLICA_EC2} '
                         docker pull ${DOCKER_REPO}:latest &&
+                        cd /home/ec2-user/monitoring &&
                         docker compose -f docker-compose.prod.yml up -d
                     '
                     """
@@ -84,16 +83,16 @@ pipeline {
         success {
             sh """
             curl -s -X POST https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage \
-            -d chat_id=${TELEGRAM_CHAT} \
-            -d text='✔ Pipeline completado con éxito en EC2'
+                -d chat_id=${TELEGRAM_CHAT} \
+                -d text="✔ Pipeline completado con éxito en EC2"
             """
         }
 
         failure {
             sh """
             curl -s -X POST https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage \
-            -d chat_id=${TELEGRAM_CHAT} \
-            -d text='❌ Pipeline falló. Revisar Jenkins.'
+                -d chat_id=${TELEGRAM_CHAT} \
+                -d text="❌ Pipeline falló. Revisar Jenkins."
             """
         }
 
